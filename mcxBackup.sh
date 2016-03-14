@@ -24,7 +24,7 @@ weeklyNumberBackups=1
 function displayHelp () {
 	echo -e "$version\n"
 	echo -e "Cet outil permet d'effectuer un backup régulier des MCX d'un serveur Mac 10.6."
-	echo -e "Cet outil est placé sous la licence Creative Commons 4.0 BY NC SA."
+	echo -e "Cet outil est placé sous la licence gpl-3.0 (GNU General Public License v3.0)"
 	echo -e "\nAvertissement:"
 	echo -e "Cet outil est distribué dans support ou garantie, la responsabilité de l'auteur ne pourrait être engagée en cas de dommage causé à vos données."
 	echo -e "\nUtilisation:"
