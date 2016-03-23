@@ -305,7 +305,7 @@ find ${datatmp%/}/${dataName%/} -type d -empty -delete > /dev/null 2>&1
 
 ## On commpresse (TAR) tous et on créé un lien symbolique pour le dernier
 cd ${datatmp%/}
-chmod -r 600 ${datatmp%/}/${dataName%/}
+chmod -R 600 ${datatmp%/}/${dataName%/}
 echo ""
 echo "Création de l'archive ${dataDir%/}/${dataName}.gz"
 tar -czf ${dataDir}/${dataName}.gz ${dataName}
