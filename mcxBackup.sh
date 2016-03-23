@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables initialisation
-version="mcxBackup v0.1 - 2016, Yvan Godard [godardyvan@gmail.com]"
+version="mcxBackup v0.2 - 2016, Yvan Godard [godardyvan@gmail.com]"
 scriptDir=$(dirname "${0}")
 scriptName=$(basename "${0}")
 scriptNameWithoutExt=$(echo "${scriptName}" | cut -f1 -d '.')
@@ -39,7 +39,7 @@ function displayHelp () {
 	echo -e "  -r <DN racineLdap> :                  DN de base de l'ensemble des entrées du LDAP (ex. : 'dc=server,dc=office,dc=com')."
 	echo -e "\nParamètres optionnels :"
 	echo -e "  -s <URL Serveur LDAP> :               URL du serveur LDAP (ex. : 'ldap://ldap.serveur.office.com',"
-	echo -e "                                        par défaut : '${ldapUrl}')"
+	echo -e "                                        par défaut : '${ldapServer}')"
 	echo -e "  -b <branches à explorer> :            Branches du LDAP à explorer, contenant des MCX à sauvegarder,"
 	echo -e "                                        (par défaut '${branchesToProcess}')."
 	echo -e "                                        Séparer les valeurs par le signe '%'"
@@ -250,6 +250,10 @@ do
 		if [ $? -eq 0 ]; then 
 			## Création d'un répertoire temporaire pour la sauvegarde avant de zipper l'ensemble des exports
 			mkdir -p ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}
+			mkdir -p ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}/toujours
+			mkdir -p ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}/souvent
+			mkdir -p ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}/une_fois
+
 			[ $? -ne 0 ] && error 1 "*** Problème pour créer le dossier ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/} ***"
 			cd ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}
 
@@ -260,10 +264,32 @@ do
 			for mcxSetting in $(cat ${allMcxAttributes} | grep '^apple-mcxsettings:' )
 			do
 				name=""
+				dirMcxLevel=""
+				mcxLevel=""
+				mcxSetOnceWithDate=""
+
 				mcxCurrentAttribute=$(mktemp /tmp/${scriptNameWithoutExt}_mcxCurrentAttribute.XXXXX)
 				base64decode ${mcxSetting} | perl -p -e 's/apple-mcxsettings: //g' >> ${mcxCurrentAttribute}
-				name=$(xmllint --xpath '/plist/dict/dict/key' ${mcxCurrentAttribute} | perl -p -e 's/<key>//g' | perl -p -e 's/<\/key>/\n/g')
-				cp ${mcxCurrentAttribute} ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}/${name}.plist
+				name=$(echo 'cat //plist/dict/dict/key' |  xmllint --shell ${mcxCurrentAttribute} | grep -v "^/ >" | perl -p -e 's/<key>//g' | perl -p -e 's/<\/key>//g')
+				mcxLevel=$(echo 'cat //plist/dict/dict/dict/key' | xmllint --shell ${mcxCurrentAttribute} | grep -v "^/ >" | perl -p -e 's/<key>//g' | perl -p -e 's/<\/key>//g')
+				# echo "" && echo "${attribute}=${entry},cn=${branch},${ldapDnBase}" && echo "${name}" && echo "${mcxLevel}"
+				# On génère un plist propre
+				head -3 ${mcxCurrentAttribute} >> ${mcxCurrentAttribute}.clean
+				echo 'cat //plist/dict/dict/dict/array/dict/dict' | xmllint --shell ${mcxCurrentAttribute} | grep -v "^/ >" | perl -p -e 's/\t\t\t\t\t//g' >> ${mcxCurrentAttribute}.clean
+				echo "</plist>" >> ${mcxCurrentAttribute}.clean
+
+				# On déplace dans le dossier qui corresponds
+				if [[ ${mcxLevel} == "Forced" ]]; then
+					dirMcxLevel="toujours"
+				elif [[ ${mcxLevel} == "Set-Once" ]]; then
+					mcxSetOnceWithDate=$(echo 'cat //plist/dict/dict/dict/array/dict/date' | xmllint --shell ${mcxCurrentAttribute} | grep -v "^/ >" | perl -p -e 's/<date>//g' | perl -p -e 's/<\/date>//g')
+					if [[ ${mcxSetOnceWithDate} == "" ]]; then
+						dirMcxLevel="souvent"
+					else
+						dirMcxLevel="une_fois"
+					fi
+				fi
+				mv ${mcxCurrentAttribute}.clean ${datatmp%/}/${dataName%/}/${branch%/}/${entry%/}/${dirMcxLevel}/${name}.plist
 				rm ${mcxCurrentAttribute}
 			done
 			IFS=$oldIfs
