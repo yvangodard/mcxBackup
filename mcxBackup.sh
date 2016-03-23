@@ -307,6 +307,7 @@ find ${datatmp%/}/${dataName%/} -type d -empty -delete > /dev/null 2>&1
 cd ${datatmp%/}
 echo ""
 echo "Création de l'archive ${dataDir%/}/${dataName}.gz"
+chmod -r 600 ${datatmp%/}
 tar -czf ${dataDir}/${dataName}.gz ${dataName}
 [ $? -ne 0 ] && error 1 "*** Problème lors de la création de l'archive ${dataDir%/}/${dataName}.gz ***"
 cd ${dataDir}
